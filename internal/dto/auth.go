@@ -10,9 +10,10 @@ type BaseResponse struct {
 type LoginResponse struct {
 	BlankToken        string    `json:"-"`
 	BlankTokenExpired time.Time `json:"-"`
-	AccessToken       string    `json:"accessToken"`
-	RefreshToken      string    `json:"-"`
 	SessionId         string    `json:"-"`
+	ID                string    `json:"id"`
+	FullName          string    `json:"fullName"`
+	Email             string    `json:"email"`
 }
 
 type LoginRequest struct {

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/alexedwards/scs/v2"
-	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
@@ -72,31 +71,6 @@ func (a *AuthUsecaseImpl) Login(ctx context.Context, req dto.LoginRequest) (dto.
 
 		return dto.LoginResponse{}, errors.New("username or password is wrong")
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":       data.ID,
-		"email":    data.Email,
-		"fullName": data.FullName,
-		"exp":      time.Now().Add(time.Duration(a.conf.TokenExpiry) * time.Minute).Unix(),
-	})
-
-	tokenString, err := token.SignedString([]byte(a.conf.TokenSecretKey))
-	if err != nil {
-		fmt.Printf("error due to: %v", err)
-		return dto.LoginResponse{}, errors.New("failed to generate access token")
-	}
-
-	// Generate Refresh token
-	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":    data.ID,
-		"email": data.Email,
-		"exp":   time.Now().Add(time.Duration(a.conf.TokenRefreshExpiry) * time.Minute).Unix(),
-	})
-
-	refreshTokenString, err := refreshToken.SignedString([]byte(a.conf.TokenSecretKey))
-	if err != nil {
-		fmt.Printf("error due to: %v", err)
-		return dto.LoginResponse{}, errors.New("failed to generate refresh token")
-	}
 
 	a.sessionManager.Put(ctx, "session-id", data.ID)
 	blankToken := a.helper.GenerateBlankToken()
@@ -109,8 +83,9 @@ func (a *AuthUsecaseImpl) Login(ctx context.Context, req dto.LoginRequest) (dto.
 		IsValid:   true,
 	})
 	response := dto.LoginResponse{
-		AccessToken:       tokenString,
-		RefreshToken:      refreshTokenString,
+		ID:                data.ID,
+		FullName:          data.FullName,
+		Email:             data.Email,
 		BlankToken:        blankToken,
 		BlankTokenExpired: blankTokenExpired,
 	}
