@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Program",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd", // Correct path to your main entry point
+            "cwd": "${workspaceFolder}", // Explicitly set the working directory
+            "envFile": "${workspaceFolder}/.env", // Ensure the .env file path is correct
+            "env": {}, // Add environment variables here if needed
+            "args": [] // Add arguments for your program if needed
+        }
+    ]
+}
