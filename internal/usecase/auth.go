@@ -29,6 +29,7 @@ type AuthUsecase interface {
 	Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error)
 	IncrementFailedAttemps(ctx context.Context, userId string) (int64, error)
 	LockUser(ctx context.Context, userId string) error
+	Logout(ctx context.Context) error
 }
 
 func NewAuthUseCase(conf config.Config, userRepository repository.UserRepository, sessionRepository repository.SessionRepository, sessionManager scs.SessionManager, redisClient *redis.Client, helper helper.UtilInterface) AuthUsecase {
@@ -102,4 +103,12 @@ func (a *AuthUsecaseImpl) LockUser(ctx context.Context, userId string) error {
 	key := "lockout:" + userId
 	expiration := time.Duration(a.conf.LoginFinaltyTime) * time.Minute
 	return a.redisClient.Set(ctx, key, "true", expiration).Err()
+}
+
+func (a *AuthUsecaseImpl) Logout(ctx context.Context) error {
+	err := a.sessionManager.Destroy(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -46,3 +46,23 @@ func (a *AuthController) Login(c *gin.Context) {
 	})
 	c.Set("data", data)
 }
+
+func (a *AuthController) Logout(c *gin.Context) {
+	err := a.authUsecase.Logout(c.Request.Context())
+	if err != nil {
+		c.Status(500)
+		c.Set("data", err)
+		return
+	}
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		MaxAge:   -1,
+		Domain:   "localhost",
+		Path:     "/",
+		Secure:   false,
+		HttpOnly: false,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+}
