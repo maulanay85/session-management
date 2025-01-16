@@ -1,50 +1,60 @@
 package repository
 
 import (
+	"context"
+	"scs-session/internal/config"
 	"scs-session/internal/domain"
+	"time"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
 type SessionRepositoryImpl struct {
-	db *gorm.DB
+	db   *gorm.DB
+	r    *redis.Client
+	conf config.Config
 }
 
 type SessionRepository interface {
-	InsertSession(data domain.Session) (domain.Session, error)
-	UpdateSession(data domain.Session) (domain.Session, error)
-	GetByToken(token string) (domain.Session, error)
+	InsertSession(ctx context.Context, data domain.Session) error
+	UpdateSession(ctx context.Context, data domain.Session) (domain.Session, error)
+	GetByToken(ctx context.Context, token string) (domain.Session, error)
 }
 
-func NewSessionRepository(db *gorm.DB) SessionRepository {
+func NewSessionRepository(db *gorm.DB, r *redis.Client, conf config.Config) SessionRepository {
 	return &SessionRepositoryImpl{
-		db: db,
+		db:   db,
+		r:    r,
+		conf: conf,
 	}
 }
 
 // InsertSession implements SessionRepository.
-func (s *SessionRepositoryImpl) InsertSession(data domain.Session) (domain.Session, error) {
-	result := s.db.Create(&data)
-	if result.Error != nil {
-		return domain.Session{}, result.Error
+func (s *SessionRepositoryImpl) InsertSession(ctx context.Context, data domain.Session) error {
+	if err := s.r.Set(ctx, "token:"+data.Token, data.ID, time.Until(data.ExpiredAt)).Err(); err != nil {
+		return err
 	}
-	return data, nil
+	return nil
 }
 
 // UpdateSession implements SessionRepository.
-func (s *SessionRepositoryImpl) UpdateSession(data domain.Session) (domain.Session, error) {
-	result := s.db.Save(data)
-	if result.Error != nil {
-		return domain.Session{}, result.Error
+func (s *SessionRepositoryImpl) UpdateSession(ctx context.Context, data domain.Session) (domain.Session, error) {
+	if err := s.r.Expire(ctx, "token:"+data.Token, time.Until(data.ExpiredAt)).Err(); err != nil {
+		return domain.Session{}, err
 	}
 	return data, nil
 }
 
 // GetByToken implements SessionRepository.
-func (s *SessionRepositoryImpl) GetByToken(token string) (domain.Session, error) {
-	var session domain.Session
-	if err := s.db.Where("token = ?", token).First(&session).Error; err != nil {
+func (s *SessionRepositoryImpl) GetByToken(ctx context.Context, token string) (domain.Session, error) {
+	result, err := s.r.Get(ctx, token).Result()
+	if err != nil {
 		return domain.Session{}, err
 	}
-	return session, nil
+	return domain.Session{
+		Token:  token,
+		UserID: result,
+	}, nil
+
 }

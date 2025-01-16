@@ -49,7 +49,7 @@ func Init(conf config.Config) *gin.Engine {
 
 	// repository
 	userRepository := repository.NewUserRepository(db)
-	sessionRepository := repository.NewSessionRepository(db)
+	sessionRepository := repository.NewSessionRepository(db, redisClient, conf)
 
 	// usecase
 	authUsecase := usecase.NewAuthUseCase(conf, userRepository, sessionRepository, *sessionManager, redisClient, util)

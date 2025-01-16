@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/alexedwards/scs/v2"
-	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -76,13 +75,14 @@ func (a *AuthUsecaseImpl) Login(ctx context.Context, req dto.LoginRequest) (dto.
 	a.sessionManager.Put(ctx, "session-id", data.ID)
 	blankToken := a.helper.GenerateBlankToken()
 	blankTokenExpired := time.Now().Add(time.Duration(a.conf.SessionMaxIdleTime) * time.Minute)
-	a.sessionRepository.InsertSession(domain.Session{
-		ID:        uuid.New().String(),
+	err = a.sessionRepository.InsertSession(ctx, domain.Session{
 		UserID:    data.ID,
 		Token:     blankToken,
 		ExpiredAt: blankTokenExpired,
-		IsValid:   true,
 	})
+	if err != nil {
+		return dto.LoginResponse{}, err
+	}
 	response := dto.LoginResponse{
 		ID:                data.ID,
 		FullName:          data.FullName,

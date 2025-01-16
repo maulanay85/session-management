@@ -107,10 +107,17 @@ func SessionMiddleware(config config.Config, sessionManager *scs.SessionManager,
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 
+		d, err := sessionUsecase.Validate(c.Request.Context(), cookie)
+		if err != nil {
+			c.Status(500)
+			c.Abort()
+			return
+		}
+
 		cr := &http.Cookie{
 			Name:     "token",
-			Value:    session.Token,
-			MaxAge:   int(time.Duration(config.SessionMaxIdleTime)*time.Minute/time.Second) + 1,
+			Value:    d.Token,
+			MaxAge:   int(time.Until(d.ExpiredAt)) + 1,
 			Domain:   "localhost",
 			Path:     "/",
 			Secure:   false,
