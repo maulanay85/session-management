@@ -18,7 +18,7 @@ type SessionUsecaseImpl struct {
 
 // GetByToken implements SessionUsecase.
 func (s *SessionUsecaseImpl) GetByToken(ctx context.Context, token string) (domain.Session, error) {
-	data, err := s.sr.GetByToken(token)
+	data, err := s.sr.GetByToken(ctx, token)
 	if err != nil {
 		return domain.Session{}, err
 	}
@@ -40,23 +40,14 @@ func NewSessionUsecase(conf config.Config, sr repository.SessionRepository, sm s
 
 // Validate implements SessionUsecase.
 func (s *SessionUsecaseImpl) Validate(ctx context.Context, token string) (domain.Session, error) {
-	data, err := s.sr.GetByToken(token)
+	data, err := s.sr.GetByToken(ctx, token)
 	if err != nil {
 		return domain.Session{}, err
-	}
-	if time.Now().After(data.ExpiredAt) || !data.IsValid {
-
-		data.IsValid = false
-		_, err := s.sr.UpdateSession(data)
-		if err != nil {
-			return domain.Session{}, err
-		}
-		return data, nil
 	}
 	now := time.Now()
 	newExpiry := now.Add(time.Duration(s.conf.SessionMaxIdleTime) * time.Minute)
 	data.ExpiredAt = newExpiry
-	_, err = s.sr.UpdateSession(data)
+	_, err = s.sr.UpdateSession(ctx, data)
 	if err != nil {
 		return domain.Session{}, err
 	}

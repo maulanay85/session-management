@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/alexedwards/scs/v2"
-	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -29,6 +28,7 @@ type AuthUsecase interface {
 	Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error)
 	IncrementFailedAttemps(ctx context.Context, userId string) (int64, error)
 	LockUser(ctx context.Context, userId string) error
+	Logout(ctx context.Context) error
 }
 
 func NewAuthUseCase(conf config.Config, userRepository repository.UserRepository, sessionRepository repository.SessionRepository, sessionManager scs.SessionManager, redisClient *redis.Client, helper helper.UtilInterface) AuthUsecase {
@@ -75,13 +75,14 @@ func (a *AuthUsecaseImpl) Login(ctx context.Context, req dto.LoginRequest) (dto.
 	a.sessionManager.Put(ctx, "session-id", data.ID)
 	blankToken := a.helper.GenerateBlankToken()
 	blankTokenExpired := time.Now().Add(time.Duration(a.conf.SessionMaxIdleTime) * time.Minute)
-	a.sessionRepository.InsertSession(domain.Session{
-		ID:        uuid.New().String(),
+	err = a.sessionRepository.InsertSession(ctx, domain.Session{
 		UserID:    data.ID,
 		Token:     blankToken,
 		ExpiredAt: blankTokenExpired,
-		IsValid:   true,
 	})
+	if err != nil {
+		return dto.LoginResponse{}, err
+	}
 	response := dto.LoginResponse{
 		ID:                data.ID,
 		FullName:          data.FullName,
@@ -102,4 +103,12 @@ func (a *AuthUsecaseImpl) LockUser(ctx context.Context, userId string) error {
 	key := "lockout:" + userId
 	expiration := time.Duration(a.conf.LoginFinaltyTime) * time.Minute
 	return a.redisClient.Set(ctx, key, "true", expiration).Err()
+}
+
+func (a *AuthUsecaseImpl) Logout(ctx context.Context) error {
+	err := a.sessionManager.Destroy(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
