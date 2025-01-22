@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"scs-session/internal/config"
 	"scs-session/internal/usecase"
@@ -96,9 +97,9 @@ func SessionMiddleware(config config.Config, sessionManager *scs.SessionManager,
 			c.Abort()
 			return
 		}
-		session, err := sessionUsecase.GetByToken(c.Request.Context(), cookie)
+		session, err := sessionUsecase.GetByToken(c.Request.Context(), fmt.Sprintf("token:%s", cookie))
 		if err != nil {
-			c.Status(500)
+			c.Status(401)
 			c.Abort()
 			return
 		}
@@ -116,8 +117,8 @@ func SessionMiddleware(config config.Config, sessionManager *scs.SessionManager,
 
 		cr := &http.Cookie{
 			Name:     "token",
-			Value:    d.Token,
-			MaxAge:   int(time.Until(d.ExpiredAt)) + 1,
+			Value:    cookie,
+			MaxAge:   int(time.Until(d.ExpiredAt).Seconds() + 1),
 			Domain:   "localhost",
 			Path:     "/",
 			Secure:   false,

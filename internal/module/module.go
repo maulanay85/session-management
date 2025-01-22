@@ -3,6 +3,7 @@ package module
 import (
 	"fmt"
 	"scs-session/internal/config"
+	"scs-session/internal/consumer"
 	"scs-session/internal/controller"
 	"scs-session/internal/helper"
 	"scs-session/internal/middleware"
@@ -44,21 +45,36 @@ func Init(conf config.Config) *gin.Engine {
 	// database
 	db := config.InitializeDatabase(conf)
 
+	// message broker
+	nsq, err := config.InitializeNSQ(conf)
+	if err != nil {
+		panic(err)
+	}
+
 	// redis
 	redisClient := config.InitializeRedis(&conf)
 
 	// repository
+	auditTrailRepository := repository.NewAuditTrailRepository(db)
 	userRepository := repository.NewUserRepository(db)
 	sessionRepository := repository.NewSessionRepository(db, redisClient, conf)
+	nsqRepository := repository.NewNSQRepository(&nsq)
 
 	// usecase
+	auditTrailUsecase := usecase.NewAuditTrailUsecase(auditTrailRepository, nsqRepository)
 	authUsecase := usecase.NewAuthUseCase(conf, userRepository, sessionRepository, *sessionManager, redisClient, util)
 	sessionUsecase := usecase.NewSessionUsecase(conf, sessionRepository, *sessionManager)
-	userUsecase := usecase.NewUserUsecase(userRepository)
+	userUsecase := usecase.NewUserUsecase(userRepository, nsqRepository)
 
 	// controller
 	authController := controller.NewAuthController(authUsecase)
 	userController := controller.NewUserController(userUsecase)
+	auditTrailController := controller.NewAuditTrailController(auditTrailUsecase)
+
+	go func() {
+		ansq := consumer.NewNSQConsumer(auditTrailUsecase)
+		consumer.StartNSQConsumer(conf.NsqUrl, "audit_trail", ansq)
+	}()
 
 	r.Use(middleware.LoadAndSave(sessionManager))
 	r.GET("/ping", func(ctx *gin.Context) {
@@ -68,10 +84,12 @@ func Init(conf config.Config) *gin.Engine {
 	{
 		authGroup.POST("", authController.Login)
 	}
-	profileGroup := r.Group("/profile")
-	profileGroup.Use(middleware.SessionMiddleware(conf, sessionManager, sessionUsecase))
+	v1 := r.Group("/v1")
+	v1.Use(middleware.SessionMiddleware(conf, sessionManager, sessionUsecase))
 	{
-		profileGroup.GET("/", userController.GetProfile)
+		v1.GET("/profile", userController.GetProfile)
+		v1.PUT("/user/:id", userController.Update)
+		v1.GET("/audit-trail", auditTrailController.GetAll)
 	}
 	return r
 }

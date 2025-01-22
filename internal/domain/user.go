@@ -10,6 +10,7 @@ type User struct {
 	FullName string `gorm:"column:full_name" json:"fullName"`
 	Email    string `gorm:"column:email" json:"email"`
 	Password string `gorm:"column:password" json:"-"`
+	Address  string `gorm:"column:address"`
 }
 
 type DummyUser map[string]User

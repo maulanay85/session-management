@@ -11,6 +11,15 @@ type UserRepositoryImpl struct {
 	db *gorm.DB
 }
 
+// Update implements UserRepository.
+func (u *UserRepositoryImpl) Update(data domain.User) (domain.User, error) {
+	result := u.db.Save(&data)
+	if result.Error != nil {
+		return domain.User{}, result.Error
+	}
+	return data, nil
+}
+
 // FindById implements UserRepository.
 func (u *UserRepositoryImpl) FindById(id string) (domain.User, error) {
 	var user domain.User
@@ -38,6 +47,7 @@ func (u *UserRepositoryImpl) GetByEmail(email string) (domain.User, error) {
 type UserRepository interface {
 	GetByEmail(email string) (domain.User, error)
 	FindById(id string) (domain.User, error)
+	Update(domain.User) (domain.User, error)
 }
 
 func NewUserRepository(db *gorm.DB) UserRepository {

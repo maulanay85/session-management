@@ -25,6 +25,9 @@ type Config struct {
 	SessionMaxIdleTime int
 	LoginFinaltyTime   int64
 	LoginMaxTry        int
+	NsqTopic           string
+	NsqChannel         string
+	NsqUrl             string
 }
 
 func InitializeConfig() (*Config, error) {
@@ -55,6 +58,9 @@ func InitializeConfig() (*Config, error) {
 		SessionMaxIdleTime: viper.GetInt("session.max.idle.time"),
 		LoginMaxTry:        viper.GetInt("login.max.try"),
 		LoginFinaltyTime:   viper.GetInt64("login.finalty.time"),
+		NsqTopic:           viper.GetString("nsq.topic"),
+		NsqChannel:         viper.GetString("nsq.channel"),
+		NsqUrl:             viper.GetString("nsq.url"),
 	}
 	return config, nil
 }

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"scs-session/internal/config"
 	"scs-session/internal/domain"
 	"scs-session/internal/repository"
@@ -40,7 +41,7 @@ func NewSessionUsecase(conf config.Config, sr repository.SessionRepository, sm s
 
 // Validate implements SessionUsecase.
 func (s *SessionUsecaseImpl) Validate(ctx context.Context, token string) (domain.Session, error) {
-	data, err := s.sr.GetByToken(ctx, token)
+	data, err := s.sr.GetByToken(ctx, fmt.Sprintf("token:%s", token))
 	if err != nil {
 		return domain.Session{}, err
 	}

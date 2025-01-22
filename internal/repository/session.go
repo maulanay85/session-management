@@ -32,7 +32,7 @@ func NewSessionRepository(db *gorm.DB, r *redis.Client, conf config.Config) Sess
 
 // InsertSession implements SessionRepository.
 func (s *SessionRepositoryImpl) InsertSession(ctx context.Context, data domain.Session) error {
-	if err := s.r.Set(ctx, "token:"+data.Token, data.ID, time.Until(data.ExpiredAt)).Err(); err != nil {
+	if err := s.r.Set(ctx, "token:"+data.Token, data.UserID, time.Until(data.ExpiredAt)).Err(); err != nil {
 		return err
 	}
 	return nil
@@ -40,7 +40,7 @@ func (s *SessionRepositoryImpl) InsertSession(ctx context.Context, data domain.S
 
 // UpdateSession implements SessionRepository.
 func (s *SessionRepositoryImpl) UpdateSession(ctx context.Context, data domain.Session) (domain.Session, error) {
-	if err := s.r.Expire(ctx, "token:"+data.Token, time.Until(data.ExpiredAt)).Err(); err != nil {
+	if err := s.r.Expire(ctx, data.Token, time.Until(data.ExpiredAt)).Err(); err != nil {
 		return domain.Session{}, err
 	}
 	return data, nil

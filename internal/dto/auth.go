@@ -20,3 +20,9 @@ type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+type UserUpdateRequest struct {
+	FullName string `gorm:"column:full_name" json:"fullName"`
+	Email    string `gorm:"column:email" json:"email"`
+	Address  string `gorm:"column:address"`
+}
